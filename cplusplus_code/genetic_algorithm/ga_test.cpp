@@ -17,6 +17,7 @@
  * 
  * ============================================================ */
 
+//libraries and dependencies
 #include <iostream>
 #include <vector>
 #include <boost/dynamic_bitset.hpp>
@@ -27,8 +28,9 @@ int
 main ( int argc, char *argv[] )
 {
 
-	GA_classic ga;
+	GA_classic ga; //create a GA class
 
+	//Set initial parameters --------------------
 	ga.set_population_size(20);
 	ga.set_no_var(2);
 	ga.set_no_bit(16);
@@ -42,15 +44,9 @@ main ( int argc, char *argv[] )
 	std::vector<double> range(range_vals,range_vals+sizeof(range_vals)/sizeof(double));
 	ga.set_search_range(range);
 	ga.set_search_obj("min");
-
-	/*
-	ga.set_initial_popu();
-	std::vector< boost::dynamic_bitset<> > population;
-	population = ga.get_population();
-	std::cout << population.at(0) << std::endl;
-	ga.popu_eval();
-	*/
-
+	//---------------------------------------------------
+	
+	//Run GA main loop
 	ga.ga_loop();
 	return 0;
 }

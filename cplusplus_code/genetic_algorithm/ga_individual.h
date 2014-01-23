@@ -24,8 +24,9 @@
 
 struct ga_individual
 {
-	boost::dynamic_bitset<> solution;
-	double sol_eval;
+	boost::dynamic_bitset<> solution; //bitstring representing a solution
+	double sol_eval; //value of the obj fcn with the prev solution as an input
+	//operator to order this element in a priority queue
 	bool operator <(const ga_individual other) const
 	{ return sol_eval > other.sol_eval;} 
 

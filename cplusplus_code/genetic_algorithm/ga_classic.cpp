@@ -27,6 +27,7 @@
 #include "ga_classic.h"
 
 //--- Constructor ------------------------------
+//The values are initialized with default values in order to avoid exceptions
 GA_classic::GA_classic()
 {
 	std::vector<double> dummy_range;
@@ -96,28 +97,58 @@ void GA_classic::set_error_thresh(double value)
 double GA_classic::get_error_thresh()
 { return error_thresh;}
 
-//std::vector<double> GA_classic::get_best_ind()
-//{ return best_ind;}
-
 std::vector< std::vector<double> > GA_classic::get_history_best_ind()
 { return history_best_ind;}
 
 std::priority_queue<GA_ind > GA_classic::get_population()
 { return population;}
 
-std::vector<double> GA_classic::get_popu_fitness()
-{ return popu_fitness;}
 
 //------------------------------------------------------------------
 
+//------------ GA methods -----------------------------------------
+
+//Main loop -----
+void GA_classic::ga_loop()
+{
+
+	int iter = 0;
+	std::vector<double> prev_best(3,0.);
+	std::vector<double> curr_best;
+	double best_error = 0.;
+
+	srand(time(NULL));
+	set_initial_popu();
+	print_popu(); //debugging
+
+	while (iter <= limit_iter) //to check solutions imporvement
+	{
+		popu_eval();
+		curr_best = get_best_ind();
+		print_popu(); //debugging
+
+		best_error = std::abs(prev_best.at(2)-curr_best.at(2));
+		prev_best = curr_best;	
+
+		if(best_error <= error_thresh)
+		{ iter++;}
+		else
+		{ iter = 0;}
+
+		next_popu();
+		print_popu(); //debugging
+	}
+
+	std::cout << "*** Best solution ***" << std::endl;
+	std::cout << curr_best.at(0) << " +++ " << curr_best.at(1) << " +++ " << curr_best.at(2) << std::endl;
+}
+
+//Create initial population randomly, within the range
+//Pooulation is stored in a priority queue which contains a dedicated node. Each node stores a bit-string representing the variables in the objective function, and real value which is the obj fcn output with these particular values. Thus, each element represent a solution
 void GA_classic::set_initial_popu()
 {
-	//vector containing a bit-string value for each variable in the objective function. Each row contains a value for all variables (each row represents a solution)
-	//std::vector< boost::dynamic_bitset<> > pop;
-	//std::vector<GA_ind> pop;
 	GA_ind ga_ind;
 	int rand_no = 0;
-
 	
 	for(int i = 0; i < population_size; i++)
 	{
@@ -136,50 +167,11 @@ void GA_classic::set_initial_popu()
 		population.push(ga_ind);
 	}
 
-	//population = pop;
-
 }
 
-
-
-void GA_classic::ga_loop()
-{
-
-	int iter = 0;
-	std::vector<double> prev_best(3,0.);
-	std::vector<double> curr_best;
-	double best_error = 0.;
-
-	srand(time(NULL));
-	set_initial_popu();
-	print_popu();
-
-	while (iter <= limit_iter)
-	{
-		popu_eval();
-		curr_best = get_best_ind();
-		print_popu();
-
-		best_error = std::abs(prev_best.at(2)-curr_best.at(2));
-		prev_best = curr_best;	
-
-		if(best_error <= error_thresh)
-		{ iter++;}
-		else
-		{ iter = 0;}
-
-		next_popu();
-		print_popu();
-	}
-
-	std::cout << "*** Best solution ***" << std::endl;
-	std::cout << curr_best.at(0) << " +++ " << curr_best.at(1) << " +++ " << curr_best.at(2) << std::endl;
-}
-
-
+//Evaluate the current population in the obj fcn
 void GA_classic::popu_eval()
 {
-
 	std::priority_queue<GA_ind> tmp_popu;
 	GA_ind ga_ind;
 	std::vector<double> tmp_real_vals;
@@ -187,16 +179,13 @@ void GA_classic::popu_eval()
 
 	for(int ind = 0; ind < population_size; ind++)
 	{
+		//Convert the bit string to a real value
 		tmp_real_vals = bit_to_num(population.top().solution);
-		//std::cout << "Real value X: " << tmp_real_vals.at(0) << std::endl;
-		//std::cout << "Real value Y: " << tmp_real_vals.at(1) << std::endl;
 
 		//Change this function to the one you are interested in
 		//Goldstein function
 		tmp_val=(1+std::pow((tmp_real_vals.at(0)+tmp_real_vals.at(1)+1),2.0)*(19-14*tmp_real_vals.at(0)+3*std::pow(tmp_real_vals.at(0),2.0)-14*tmp_real_vals.at(1)+6*tmp_real_vals.at(0)*tmp_real_vals.at(1)+3*std::pow(tmp_real_vals.at(1),2.0)))*(30+std::pow((2*tmp_real_vals.at(0)-3*tmp_real_vals.at(1)),2.0)*(18-32*tmp_real_vals.at(0)+12*std::pow(tmp_real_vals.at(0),2.0)+48*tmp_real_vals.at(1)-36*tmp_real_vals.at(0)*tmp_real_vals.at(1)+27*std::pow(tmp_real_vals.at(1),2.0)));
 
-		//std::cout << "evaluation: " << tmp_val << std::endl;
-		
 		ga_ind.solution = population.top().solution;
 		ga_ind.sol_eval = tmp_val;
 		tmp_popu.push(ga_ind);
@@ -207,6 +196,7 @@ void GA_classic::popu_eval()
 	swap(population,tmp_popu);
 }
 
+//Method to convert the map the bitstring to real values for each defined variable
 std::vector<double> GA_classic::bit_to_num(boost::dynamic_bitset<> bit_string)
 {
 	std::vector<double> num_values; //vector with real values of the bit_stings
@@ -214,9 +204,8 @@ std::vector<double> GA_classic::bit_to_num(boost::dynamic_bitset<> bit_string)
 	boost::dynamic_bitset<> bit_string_cp(bit_string);
 	boost::dynamic_bitset<> btmp;
 	const boost::dynamic_bitset<> mask( no_var*no_bit, (unsigned long)(std::pow(2.0,no_bit)-1.) );	
-	//std::cout << "Mask: " << mask << std::endl;
 
-	//iterate to throught the string to get the real valus for each variable	
+	//iterate to through the string to get the real values for each variable	
 	for(int i = 0; i < no_var; i++)
 	{
 		
@@ -233,6 +222,7 @@ std::vector<double> GA_classic::bit_to_num(boost::dynamic_bitset<> bit_string)
 	 
 }
 
+//Method to build the next population of solutions based on the evaluation of the current population
 void GA_classic::next_popu()
 {
 	std::vector<double> fitness;
@@ -271,6 +261,7 @@ void GA_classic::next_popu()
 		
 }
 
+//Store-record the best solution in the population
 std::vector<double> GA_classic::get_best_ind()
 {
 	std::vector<double> best_sol, tmp_real_vals;
@@ -286,6 +277,7 @@ std::vector<double> GA_classic::get_best_ind()
 	return best_sol;
 }
 
+//Obtain the fitness value of the poulation based on the obj fcn values
 std::vector<double> GA_classic::popu_fitness_eval(std::string s)
 {
 	std::vector<double> fitness;
@@ -310,6 +302,7 @@ std::vector<double> GA_classic::popu_fitness_eval(std::string s)
 	return fitness;
 }
 
+//Compute probability of reproduction for each solution
 std::vector<double> GA_classic::compute_sel_prob(std::vector<double> f)
 {
 	double total_fitness = 0.;
@@ -328,6 +321,7 @@ std::vector<double> GA_classic::compute_sel_prob(std::vector<double> f)
 
 }
 
+//Compute cummulative probability for each solution
 std::vector<double> GA_classic::compute_cum_sel_prob(std::vector<double> prob)
 {
 	std::vector<double> cum_prob;
@@ -343,7 +337,7 @@ std::vector<double> GA_classic::compute_cum_sel_prob(std::vector<double> prob)
 	return cum_prob;
 }
 
-
+//Get best individuals in the population and stored them
 std::vector<GA_ind> GA_classic::get_elites()
 {
 	std::priority_queue<GA_ind> tmp_popu;
@@ -360,17 +354,19 @@ std::vector<GA_ind> GA_classic::get_elites()
 	return elites;
 }
 
+//Select parents randomly - guarantee that the same parent is not pick twice
 std::vector<int> GA_classic::parent_selection(std::vector<double> cum_prob)
 {
 	std::vector<int> parents;
 	double rand_no = 0;
-	char flag_fp = 0; //falg that indicates if a valid parent was found
+	char flag_fp = 0; //flag that indicates if a valid parent was found
 	int i = 0;
 	int no_parents = 0;
 	int prev_parent = -1;
 
 	while(no_parents < 2)
 	{
+		//This formula is constantly used to ensure a value gretaer than 0 and greater or equal to 1
 		rand_no = (double)((rand()%RAND_MAX)+1) / (RAND_MAX);
 		flag_fp = 0;
 		i = 0;
@@ -404,6 +400,7 @@ std::vector<int> GA_classic::parent_selection(std::vector<double> cum_prob)
 	return parents;
 }
 
+//Crossover of the population
 std::priority_queue<GA_ind> GA_classic::crossover(std::vector<double> cum_prob)
 {
 
@@ -427,6 +424,8 @@ std::priority_queue<GA_ind> GA_classic::crossover(std::vector<double> cum_prob)
 	{
 		//Parent selection
 		parents = parent_selection(cum_prob);
+
+		//For debugging
 		std::cout << "*** Selected parents ***" << std::endl;
 		std::cout << "Parent1: " << parents.at(0) << " Parent2: " << parents.at(1) << std::endl;
 	
@@ -436,11 +435,15 @@ std::priority_queue<GA_ind> GA_classic::crossover(std::vector<double> cum_prob)
 		if(rand_no < crossover_rate)
 		{
 			cut_point = ceil(rand_no * no_bit * no_var)-1;
+
+			//For debugging
 			std::cout << "*** Cut point ***" << std::endl;
 			std::cout << cut_point << std::endl;
+
 			tmp_bs1 = popu_cp.at(parents.at(0));
 			tmp_bs2 = popu_cp.at(parents.at(1));
 
+			//For debugging
 			std::cout << tmp_bs1 << std::endl;
 			std::cout << tmp_bs2 << std::endl;
 		
@@ -463,6 +466,7 @@ std::priority_queue<GA_ind> GA_classic::crossover(std::vector<double> cum_prob)
 	return new_popu;
 }
 
+//Mutation of an individual
 boost::dynamic_bitset<> GA_classic:: mutation(boost::dynamic_bitset<> b)
 {
 
@@ -474,6 +478,7 @@ boost::dynamic_bitset<> GA_classic:: mutation(boost::dynamic_bitset<> b)
 
 		if(rand_no < mutation_rate)
 		{
+			//For debugging
 			std::cout << "!!! MUTATION !!!" << std::endl;
 			std::cout << "Bit: " << bit << std::endl;
 			b[bit].flip();
@@ -483,6 +488,9 @@ boost::dynamic_bitset<> GA_classic:: mutation(boost::dynamic_bitset<> b)
 	return b;
 }
 
+
+
+// --- Next methods were implemented for debugging purposes ----
 void GA_classic::print_popu()
 {
 	GA_ind ga_ind;
@@ -510,3 +518,5 @@ void GA_classic::print_probs(std::vector<double> p)
 		std::cout << p.at(i) << std::endl;
 	}
 }
+
+//---------------------------------------------------------------
